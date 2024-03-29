@@ -33,9 +33,6 @@
 				<client-only>
 					<DatePicker2
 						@dateSelected="handleDateSelected"
-						@dateTimeSelected="handleDateTimeSelected"
-						@personalDetails="handlePersonalDetails"
-						@findCurrentTab="handleFindCurrentTab"
 						:isSmallDevice="isSmallDevice"
 						:selectedDate="selectedDate" />
 				</client-only>
@@ -48,29 +45,12 @@
 	import { ref, computed } from "vue";
 
 	const selectedDate = ref(null);
-	const dateTimeSelected = ref({});
+
 	const personalDetails = ref({});
 	const currentTab = ref(1);
 
 	function handleDateSelected(date, tab) {
 		selectedDate.value = date;
-		currentTab.value = tab;
-		console.log("currentTab", currentTab.value);
-	}
-
-	function handleDateTimeSelected(date, tab) {
-		dateTimeSelected.value = date;
-		currentTab.value = tab;
-		console.log("currentTab", currentTab.value, dateTimeSelected.value);
-	}
-
-	function handlePersonalDetails(date, tab) {
-		personalDetails.value = date;
-		currentTab.value = tab;
-	}
-
-	function handleFindCurrentTab(tab) {
-		currentTab.value = tab;
 	}
 
 	function relodePage() {

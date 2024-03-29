@@ -4,6 +4,8 @@ export const useRealmApp = () => {
 	const config = useRuntimeConfig();
 	const app = new Realm.App({ id: config.public.realmAppId });
 
+	const bookings = useState("bookings", () => []);
+
 	const bookingCol = async () => {
 		const credentials = Realm.Credentials.anonymous();
 		await app.logIn(credentials);
@@ -14,7 +16,17 @@ export const useRealmApp = () => {
 		return collection;
 	};
 
+	const allBookings = async () => {
+		const col = await bookingCol();
+		const allData = await col.find();
+
+		bookings.value = allData;
+	};
+
+	allBookings();
+
 	return {
 		bookingCol,
+		bookings,
 	};
 };

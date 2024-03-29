@@ -6,12 +6,7 @@
 
 	const { bookingCol } = useRealmApp();
 
-	const emit = defineEmits([
-		"dateSelected",
-		"dateTimeSelected",
-		"personalDetails",
-		"findCurrentTab",
-	]);
+	const emit = defineEmits(["dateSelected"]);
 	const { isSmallDevice } = defineProps(["isSmallDevice"]);
 
 	const currentDate = new Date();
@@ -27,6 +22,7 @@
 			console.log("Selected date:", formattedDate);
 			selectedDate.value = formattedDate.date;
 			formatSelectedDate();
+
 			emit("dateSelected", selectedDate.value, currentTab.value);
 		},
 		beforeShowDay: function (date) {
@@ -59,6 +55,50 @@
 	const email = ref("");
 	const details = ref("");
 
+	const disabledSlots = ref([]);
+
+	const isBookFetching = ref(false);
+	const isScheduling = ref(false);
+
+	const getBookings = async (newPickedDate) => {
+		try {
+			isBookFetching.value = true;
+			const col = await bookingCol();
+			const data = await col.find();
+
+			const bookingsData = data.filter((booking) => {
+				const bookingDate = new Date(booking.schedule_date);
+				const pickedDate = new Date(newPickedDate);
+
+				const bookingDateWithoutTime = new Date(
+					bookingDate.getFullYear(),
+					bookingDate.getMonth(),
+					bookingDate.getDate()
+				);
+
+				const selectedDateWithoutTime = new Date(
+					pickedDate.getFullYear(),
+					pickedDate.getMonth(),
+					pickedDate.getDate()
+				);
+
+				// console.log(bookingDateWithoutTime, selectedDateWithoutTime);
+				return (
+					bookingDateWithoutTime.getTime() === selectedDateWithoutTime.getTime()
+				);
+			});
+
+			const timeSlots = bookingsData.map((data) => data.time_slot);
+			disabledSlots.value = timeSlots;
+
+			console.log("running");
+			isBookFetching.value = false;
+		} catch (err) {
+			console.log(err);
+			isBookFetching.value = false;
+		}
+	};
+
 	onMounted(() => {
 		const airDatepicker = new AirDatepicker("#my-element", options);
 
@@ -68,6 +108,12 @@
 		// airDatepicker.$datepicker.style.color = 'green';
 		airDatepicker.$datepicker.style.fontSize = "20px";
 		airDatepicker.$datepicker.style.fontweight = "bold";
+
+		getBookings(selectedDate.value);
+	});
+
+	watch(selectedDate, (newDate) => {
+		getBookings(newDate);
 	});
 
 	function formatSelectedDate() {
@@ -90,7 +136,6 @@
 			};
 			selectedTime.value = selectedDateTime.time;
 			nextTab();
-			emit("dateTimeSelected", selectedDateTime, currentTab.value); // Emit the selected date and time slot object
 		} else {
 			console.log("Please select a date and time slot before clicking Next.");
 		}
@@ -100,31 +145,51 @@
 		if (currentTab.value > 1) {
 			currentTab.value--;
 		}
-		emit("findCurrentTab", currentTab.value);
 	}
 
 	function nextTab() {
 		if (currentTab.value < 3) {
 			currentTab.value++;
 		}
-		emit("findCurrentTab", currentTab.value);
 	}
 
 	const scheduleEvent = async () => {
-		const booking = {
-			client_name: name.value,
-			client_email: email.value,
-			comments: details.value,
-			schedule_date: selectedDate.value,
-			time_slot: selectedTime.value,
-		};
+		try {
+			isScheduling.value = true;
+			const booking = {
+				client_name: name.value,
+				client_email: email.value,
+				comments: details.value,
+				schedule_date: selectedDate.value,
+				time_slot: selectedTime.value,
+			};
 
-		(await bookingCol()).insertOne(booking);
+			(await bookingCol()).insertOne(booking);
 
-		console.log(booking);
-		// console.log(personalDetails);
-		// emit("personalDetails", personalDetails, currentTab.value);
-		nextTab();
+			console.log(booking);
+			// console.log(personalDetails);
+			// emit("personalDetails", personalDetails, currentTab.value);
+			nextTab();
+			isScheduling.value = false;
+		} catch (err) {
+			console.log(err);
+			isScheduling.value = false;
+		}
+	};
+
+	const isSlotDisable = (index) => {
+		return disabledSlots.value.includes(timeSlot.value[index]);
+	};
+
+	const resetBooking = () => {
+		selectedDate.value = null;
+		selectedTimeIndex.value = null;
+		selectedTime.value = null;
+		currentTab.value = 1;
+		name.value = null;
+		email.value = null;
+		details.value = null;
+		disabledSlots.value = [];
 	};
 </script>
 
@@ -143,16 +208,38 @@
 					</p>
 
 					<div class="mt-2 md:h-[268px] overflow-y-scroll no-scrollbar">
-						<TimeSlots
-							v-for="(time, index) in timeSlot"
-							:key="index"
-							:selectedDate="selectedDate"
-							:slots="timeSlot"
-							:time="time"
-							:index="index"
-							:timeIndex="selectedTimeIndex"
-							@slot="selectTimeSlot"
-							@next="nextClicked" />
+						<div
+							:class="`flex gap-2 ${
+								isSlotDisable(index) ? 'pointer-events-none' : ''
+							}`"
+							v-if="!isBookFetching"
+							v-for="(time, index) of timeSlot"
+							:key="index">
+							<div
+								:class="`w-full whitespace-nowrap  hover:text-white border  hover:bg-green-800 focus:ring-4 focus:outline-none focus:ring-green-300 font-bold rounded-lg px-5 py-2.5 text-center mb-2 cursor-pointer ${
+									isSlotDisable(index)
+										? 'bg-gray-200 text-gray-400 border-gray-400'
+										: 'text-green-500 border-green-700'
+								}`"
+								@click="isSlotDisable ? selectTimeSlot(index) : () => {}">
+								{{ time }}
+							</div>
+							<transition name="fade">
+								<div
+									v-if="selectedTimeIndex === index"
+									class="w-full text-green-700 hover:text-white border border-green-700 hover:bg-green-800 focus:ring-4 focus:outline-none focus:ring-green-300 font-bold rounded-lg px-5 py-2.5 text-center mb-2 cursor-pointer"
+									@click="nextClicked">
+									Next
+								</div>
+							</transition>
+						</div>
+
+						<div class="flex flex-col justify-center items-center mt-7" v-else>
+							<Spinner size="normal" />
+							<p class="text-sm font-semibold mt-2">
+								Checking available slots...
+							</p>
+						</div>
 					</div>
 				</div>
 			</div>
@@ -176,7 +263,7 @@
 								type="text"
 								id="subject"
 								v-model="name"
-								class="shadow-sm bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-primary-500 focus:border-primary-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-primary-500 dark:focus:border-primary-500 dark:shadow-sm-light"
+								class="shadow-sm bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-primary-500 focus:border-primary-500 block w-full p-2.5"
 								placeholder="Enter Your Name"
 								required />
 						</div>
@@ -190,7 +277,7 @@
 								type="email"
 								id="email"
 								v-model="email"
-								class="shadow-sm bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-primary-500 focus:border-primary-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-primary-500 dark:focus:border-primary-500 dark:shadow-sm-light"
+								class="shadow-sm bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-primary-500 focus:border-primary-500 block w-full p-2.5"
 								placeholder="name@gmail.com"
 								required />
 						</div>
@@ -211,11 +298,21 @@
 							<div class="flex my-2">
 								<!-- Next Button -->
 								<button
+									v-if="!isScheduling"
 									type="submit"
 									@click="ScheduleEvent"
 									:disabled="currentTab === 3"
 									class="flex items-center justify-center px-3 h-10 text-sm font-medium text-gray-50 bg-blue-500 border border-blue-300 rounded-lg hover:bg-blue-600 hover:text-white">
 									Schedule Event
+								</button>
+								<button
+									v-else
+									type="submit"
+									@click="ScheduleEvent"
+									:disabled="currentTab === 3"
+									class="flex items-center gap-1 justify-center px-3 h-10 text-sm font-medium text-gray-50 bg-gray-400 border border-gray-300 rounded-lg pointer-events-none">
+									<Spinner class="-mt-1" size="small" />
+									<span> Please wait </span>
 								</button>
 							</div>
 						</div>
@@ -367,6 +464,14 @@
 					</svg>
 					<p class="font-semibold">Web conferencing details to follow.</p>
 				</div>
+			</div>
+
+			<div class="flex items-start justify-start">
+				<button
+					@click="resetBooking"
+					class="text-sm text-green-500 font-medium hover:underline">
+					Book another appointment
+				</button>
 			</div>
 		</div>
 	</div>
