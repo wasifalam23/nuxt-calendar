@@ -19,7 +19,6 @@
 		minDate: new Date(),
 		maxDate: futureDate.setDate(currentDate.getDate() + 15),
 		onSelect: function (formattedDate, date, inst) {
-			console.log("Selected date:", formattedDate);
 			selectedDate.value = formattedDate.date;
 			formatSelectedDate();
 
@@ -82,7 +81,6 @@
 					pickedDate.getDate()
 				);
 
-				// console.log(bookingDateWithoutTime, selectedDateWithoutTime);
 				return (
 					bookingDateWithoutTime.getTime() === selectedDateWithoutTime.getTime()
 				);
@@ -91,7 +89,6 @@
 			const timeSlots = bookingsData.map((data) => data.time_slot);
 			disabledSlots.value = timeSlots;
 
-			console.log("running");
 			isBookFetching.value = false;
 		} catch (err) {
 			console.log(err);
@@ -166,9 +163,6 @@
 
 			(await bookingCol()).insertOne(booking);
 
-			console.log(booking);
-			// console.log(personalDetails);
-			// emit("personalDetails", personalDetails, currentTab.value);
 			nextTab();
 			isScheduling.value = false;
 		} catch (err) {
