@@ -1,5 +1,6 @@
 <script setup>
-	import moment from "moment";
+	import * as Realm from "realm-web";
+
 	import AirDatepicker from "air-datepicker";
 	import "air-datepicker/air-datepicker.css";
 	import localeEn from "air-datepicker/locale/en";
@@ -113,6 +114,7 @@
 	});
 
 	watch(selectedDate, (newDate) => {
+		console.log(selectedDate);
 		getBookings(newDate);
 	});
 
@@ -153,13 +155,25 @@
 		try {
 			isScheduling.value = true;
 
+			const uuid = Realm.BSON.ObjectID();
+
+			const startTime = toRailwayTime(selectedTimeSlot.value.start);
+			const endTime = toRailwayTime(selectedTimeSlot.value.end);
+			const scheduleDate = toFormattedDate(selectedDate.value);
+
 			const booking = {
+				_id: uuid,
+				id: uuid.toString(),
+				title: "Event",
 				client_name: name.value,
 				client_email: email.value,
-				comments: details.value,
+				description: details.value,
 				schedule_date: selectedDate.value,
-				time_slot_start: toRailwayTime(selectedTimeSlot.value.start),
-				time_slot_end: toRailwayTime(selectedTimeSlot.value.end),
+				start: `${scheduleDate} ${startTime}`,
+				end: `${scheduleDate} ${endTime}`,
+				people: [name.value],
+				time_slot_start: startTime,
+				time_slot_end: endTime,
 			};
 
 			(await bookingCol()).insertOne(booking);
@@ -290,7 +304,7 @@
 								rows="4"
 								v-model="details"
 								class="block p-2.5 w-full text-sm text-gray-900 bg-gray-50 rounded-lg shadow-sm border border-gray-300 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-primary-500 dark:focus:border-primary-500"
-								placeholder="Leave a comment..."></textarea>
+								placeholder="Write a description"></textarea>
 
 							<div class="flex my-2">
 								<!-- Next Button -->
