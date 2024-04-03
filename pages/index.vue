@@ -31,7 +31,7 @@
 			</client-only>
 			<div>
 				<client-only>
-					<DatePicker2
+					<Booking
 						@dateSelected="handleDateSelected"
 						:isSmallDevice="isSmallDevice"
 						:selectedDate="selectedDate" />

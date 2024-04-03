@@ -86,9 +86,7 @@
 				);
 			});
 
-			const slots = bookingsData.map((slot) =>
-				toAMPMTime(slot.time_slot_start)
-			);
+			const slots = bookingsData.map((slot) => toAMPMTime(slot.start));
 
 			disabledSlots.value = slots;
 			console.log(disabledSlots.value);
@@ -172,8 +170,6 @@
 				start: `${scheduleDate} ${startTime}`,
 				end: `${scheduleDate} ${endTime}`,
 				people: [name.value],
-				time_slot_start: startTime,
-				time_slot_end: endTime,
 			};
 
 			(await bookingCol()).insertOne(booking);
